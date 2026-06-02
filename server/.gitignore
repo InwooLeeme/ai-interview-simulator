@@ -1,0 +1,10 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+
+# checkpointer 등 로컬 산출물
+*.sqlite
+*.sqlite3

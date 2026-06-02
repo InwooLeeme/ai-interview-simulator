@@ -1,7 +1,7 @@
 import { Schema, Type } from "@google/genai";
 import { DEFAULT_COMPANY, Distribution, GenerateQuestionsInput } from "./types";
 
-// 기획서 5.2 의 프롬프트 골격을 구현한다. 회사명은 사용자가 선택하므로 변수로 주입.
+// 프롬프트을 구현한다. 회사명은 사용자가 선택하므로 변수로 주입.
 export function buildSystemPrompt(company: string): string {
   const companyName = company.trim() || DEFAULT_COMPANY;
   return `너는 ${companyName}의 AI 역량면접 면접관 3인이다.
