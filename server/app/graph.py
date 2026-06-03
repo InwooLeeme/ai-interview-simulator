@@ -10,6 +10,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
+from .agents.technical import generate_technical_questions
+
 InterviewerRole = Literal["facilitator", "technical", "personality"]
 
 THINK_SECONDS = 10
@@ -40,22 +42,35 @@ def _distribution(target: int) -> dict[InterviewerRole, int]:
 
 
 def generate_questions(state: InterviewState) -> dict:
-    """더미 질문 생성. 배분 규칙대로 역할 태그를 붙여 questions를 채운다.
+    """배분 규칙대로 역할별 질문을 생성한다.
 
-    P1에서 Orchestrator + 면접관 에이전트 호출로 교체된다.
+    P1: 기술(technical) 파트는 Technical 에이전트(Gemini)가 생성하고,
+    진행자/인성은 아직 더미. P2에서 나머지도 에이전트로 교체한다.
     """
     dist = _distribution(state["target_count"])
+
+    # 기술 질문은 에이전트가 생성 (실패 시 내부 폴백)
+    tech_drafts = generate_technical_questions(
+        state["tech_profile"], dist["technical"]
+    )
+
     questions: list[dict] = []
     n = 0
     for role in ("facilitator", "technical", "personality"):
-        for _ in range(dist[role]):  # type: ignore[index]
+        for i in range(dist[role]):  # type: ignore[index]
             n += 1
+            if role == "technical":
+                draft = tech_drafts[i]
+                text, source = draft["text"], draft["sourceHint"]
+            else:
+                text = f"[더미] {role} 면접관의 질문 {n}"
+                source = "(더미 — LLM 미연동)"
             questions.append(
                 {
                     "id": f"q-{n:03d}",
                     "interviewer": role,
-                    "text": f"[더미] {role} 면접관의 질문 {n}",
-                    "sourceHint": "(더미 — LLM 미연동)",
+                    "text": text,
+                    "sourceHint": source,
                     "thinkSeconds": THINK_SECONDS,
                     "answerSeconds": ANSWER_SECONDS,
                 }
