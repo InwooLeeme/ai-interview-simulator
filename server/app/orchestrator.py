@@ -1,9 +1,7 @@
 """Orchestrator — 목표 문항 수를 면접관별로 배분하고, 각 에이전트를 호출해
 질문을 조립한다. id·타이밍·role은 여기서 일관되게 부여한다.
 """
-from .agents.facilitator import generate_facilitator_questions
-from .agents.personality import generate_personality_questions
-from .agents.technical import generate_technical_questions
+from .agents.registry import INTERVIEWERS, generate_for_role
 
 THINK_SECONDS = 10
 ANSWER_SECONDS = 180
@@ -26,19 +24,15 @@ def distribution(target: int) -> dict[str, int]:
 
 
 def build_questions(resume: str, tech_profile: str, target_count: int) -> list[dict]:
-    """면접관 에이전트들을 호출해 최종 질문 리스트를 만든다."""
+    """레지스트리의 면접관들을 진행 순서대로 호출해 최종 질문 리스트를 만든다."""
     dist = distribution(target_count)
-
-    drafts_by_role = {
-        "facilitator": generate_facilitator_questions(resume, dist["facilitator"]),
-        "technical": generate_technical_questions(tech_profile, dist["technical"]),
-        "personality": generate_personality_questions(resume, dist["personality"]),
-    }
+    docs = {"resume": resume, "tech_profile": tech_profile}
 
     questions: list[dict] = []
     n = 0
-    for role in ("facilitator", "technical", "personality"):
-        for draft in drafts_by_role[role]:
+    for role, spec in INTERVIEWERS.items():
+        drafts = generate_for_role(spec, docs[spec.doc_source], dist[role])
+        for draft in drafts:
             n += 1
             questions.append(
                 {
