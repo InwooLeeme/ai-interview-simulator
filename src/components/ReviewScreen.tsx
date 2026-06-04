@@ -1,17 +1,7 @@
 "use client";
 
-import type {
-  Feedback,
-  InterviewerRole,
-  Overall,
-  Question,
-} from "@/lib/types";
-
-const ROLE_LABEL: Record<InterviewerRole, string> = {
-  facilitator: "진행자",
-  technical: "기술",
-  personality: "인성",
-};
+import { ROLE_META } from "@/lib/roles";
+import type { Feedback, Overall, Question } from "@/lib/types";
 
 interface Props {
   history: { question: Question; transcript: string }[];
@@ -81,7 +71,7 @@ export default function ReviewScreen({
               className="rounded-lg border border-gray-200 p-5"
             >
               <div className="mb-2 text-xs font-medium text-gray-400">
-                Q{i + 1} · {ROLE_LABEL[question.interviewer]}
+                Q{i + 1} · {ROLE_META[question.interviewer].shortLabel}
               </div>
               <p className="mb-3 font-medium">{question.text}</p>
 

@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { InterviewerRole, Question } from "@/lib/types";
+import { ROLE_META, ROLE_ORDER } from "@/lib/roles";
+import type { Question } from "@/lib/types";
 import { useSpeech } from "@/lib/useSpeech";
 import { useSpeechRecognition } from "@/lib/useSpeechRecognition";
-
-const ROLES: { key: InterviewerRole; label: string }[] = [
-  { key: "facilitator", label: "진행자" },
-  { key: "technical", label: "기술 면접관" },
-  { key: "personality", label: "인성 면접관" },
-];
 
 type Phase = "questionPresent" | "thinking" | "answering" | "transition";
 
@@ -105,11 +100,11 @@ export default function InterviewScreen({
 
       {/* 3 면접관 아바타 (담당자 하이라이트) */}
       <div className="flex justify-center gap-4">
-        {ROLES.map((r) => {
-          const on = r.key === speaking;
+        {ROLE_ORDER.map((role) => {
+          const on = role === speaking;
           return (
             <div
-              key={r.key}
+              key={role}
               className={`flex flex-col items-center gap-2 rounded-lg border px-6 py-4 transition ${
                 on
                   ? "border-gray-900 bg-gray-900 text-white"
@@ -117,7 +112,7 @@ export default function InterviewScreen({
               }`}
             >
               <div className="text-2xl">{on ? "🎙️" : "🧑‍💼"}</div>
-              <div className="text-xs font-medium">{r.label}</div>
+              <div className="text-xs font-medium">{ROLE_META[role].label}</div>
             </div>
           );
         })}

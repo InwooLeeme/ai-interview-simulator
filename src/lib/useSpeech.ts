@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
+import { ROLE_META } from "./roles";
 import type { InterviewerRole } from "./types";
-
-// 면접관별 목소리 차이 (한국어 음성이 보통 1개뿐이라 pitch/rate로 구분)
-const VOICE_PROFILE: Record<InterviewerRole, { pitch: number; rate: number }> = {
-  facilitator: { pitch: 1.0, rate: 1.0 }, // 진행자: 보통
-  technical: { pitch: 0.8, rate: 0.95 }, // 기술: 낮고 약간 느리게
-  personality: { pitch: 1.2, rate: 1.05 }, // 인성: 높고 약간 빠르게
-};
 
 function synth(): SpeechSynthesis | null {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
@@ -47,7 +41,7 @@ export function useSpeech() {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "ko-KR";
       if (voiceRef.current) u.voice = voiceRef.current;
-      const profile = VOICE_PROFILE[role];
+      const profile = ROLE_META[role].voice;
       u.pitch = profile.pitch;
       u.rate = profile.rate;
 
