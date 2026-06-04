@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { InterviewerRole, Question } from "@/lib/interview-machine";
+import type { InterviewerRole, Question } from "@/lib/types";
 import { useSpeech } from "@/lib/useSpeech";
 import { useSpeechRecognition } from "@/lib/useSpeechRecognition";
 

@@ -5,7 +5,7 @@ import type {
   InterviewerRole,
   Overall,
   Question,
-} from "@/lib/interview-machine";
+} from "@/lib/types";
 
 const ROLE_LABEL: Record<InterviewerRole, string> = {
   facilitator: "진행자",

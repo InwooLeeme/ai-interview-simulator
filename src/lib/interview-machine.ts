@@ -3,31 +3,7 @@
 // 질문 생성·답변 제출은 비동기 actor로 처리한다. 서버(FastAPI)와의 통신은
 // Next 프록시(/api/interview/*)를 경유한다.
 import { assign, fromPromise, setup } from "xstate";
-
-export type InterviewerRole = "facilitator" | "technical" | "personality";
-
-export interface Question {
-  id: string;
-  interviewer: InterviewerRole;
-  text: string;
-  sourceHint: string;
-  thinkSeconds: number;
-  answerSeconds: number;
-}
-
-export interface Feedback {
-  questionId: string;
-  strengths: string[];
-  improvements: string[];
-  structureTip: string;
-  modelAnswerDirection: string;
-}
-
-export interface Overall {
-  impression: string;
-  timeUsage: string;
-  topImprovements: string[];
-}
+import type { Feedback, Overall, Question } from "./types";
 
 // 서버 응답 (start / answer 공용 형태)
 interface AgentResponse {

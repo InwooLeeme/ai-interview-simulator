@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { InterviewerRole } from "./interview-machine";
+import type { InterviewerRole } from "./types";
 
 // 면접관별 목소리 차이 (한국어 음성이 보통 1개뿐이라 pitch/rate로 구분)
 const VOICE_PROFILE: Record<InterviewerRole, { pitch: number; rate: number }> = {
