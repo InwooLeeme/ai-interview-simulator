@@ -20,12 +20,18 @@ Next.js (프론트 + 얇은 프록시)  →  FastAPI (LangGraph 에이전트 서
 
 ```
 ai-interview-simulator/
-├── src/                  # Next.js 앱 (프론트 + API 프록시)
-│   └── lib/interview/    # (참고) 단일 호출 Gemini 질문 생성 — 에이전트로 이식 예정
-├── server/               # Python 에이전트 서버
+├── src/                       # Next.js 앱 (프론트 + API 프록시)
+│   ├── app/                   # 페이지 + /api/interview/* 프록시 라우트
+│   ├── components/            # 면접 UI (문서입력/진행/피드백 화면)
+│   ├── lib/interview-machine.ts  # XState 면접 진행 FSM
+│   ├── lib/agent-server.ts    # FastAPI 중계 헬퍼
+│   └── lib/interview/         # (참고) 단일 호출 Gemini 구현 — 에이전트로 이식 완료
+├── server/                    # Python 에이전트 서버
 │   └── app/
-│       ├── graph.py      # LangGraph 상태 그래프 (InterviewState, 노드/엣지)
-│       └── main.py       # FastAPI 엔드포인트 (/health, /start, /answer)
+│       ├── graph.py           # LangGraph 상태 그래프 (InterviewState, 노드/엣지)
+│       ├── orchestrator.py    # 문항 배분 + 면접관 에이전트 호출/조립
+│       ├── agents/            # facilitator/technical/personality + 공통 러너(base)
+│       └── main.py            # FastAPI 엔드포인트 (/health, /start, /answer)
 └── AI면접_시뮬레이터_기획서.md
 ```
 
@@ -92,11 +98,12 @@ npm run dev
 
 ## 진행 상황
 
-- [x] **P0** — FastAPI + LangGraph 골격: 더미 노드 그래프 + 휴먼인더루프(interrupt/resume) + 체크포인터 검증
-- [ ] **P1** — Technical 에이전트(Gemini 구조화 출력)
-- [ ] **P2** — Facilitator·Personality 에이전트 + Orchestrator 배분/검증/폴백
-- [ ] **P3** — Next.js XState FSM·타이머·TTS·녹음 연동
-- [ ] **P4** — STT 전사 + Evaluator(피드백) 에이전트
+- [x] **P0** — FastAPI + LangGraph 골격: 더미 노드 그래프 + 휴먼인더루프(interrupt/resume) + 체크포인터
+- [x] **P1** — Technical 에이전트(Gemini 구조화 출력)
+- [x] **P2** — Facilitator·Personality 에이전트 + Orchestrator 배분/검증/폴백
+- [ ] **P3** *(진행 중)* — 프론트엔드: XState FSM + 문서입력/면접진행/피드백 화면, 타이머(10s/3min, 자동·수동), Next→FastAPI 프록시 연동
+  - 남은 작업: 브라우저 TTS(질문 읽기), MediaRecorder 녹음 *(현재 답변 전사는 임시 타이핑)*
+- [ ] **P4** — STT 전사 + Evaluator(피드백) 에이전트 *(현재 피드백은 더미)*
 - [ ] **P5** — Probe(꼬리질문) 노드, LangSmith 관측, 유료 한국어 TTS
 
 전체 로드맵은 [기획서 §10](AI면접_시뮬레이터_기획서.md)을 참고.
