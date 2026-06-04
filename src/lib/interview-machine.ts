@@ -4,17 +4,7 @@
 // Next 프록시(/api/interview/*)를 경유한다.
 import { assign, fromPromise, setup } from "xstate";
 import type { Feedback, Overall, Question } from "./types";
-
-// 서버 응답 (start / answer 공용 형태)
-interface AgentResponse {
-  session_id: string;
-  done: boolean;
-  index?: number;
-  total?: number;
-  question?: Question;
-  feedback?: Feedback[];
-  overall?: Overall | null;
-}
+import * as api from "./api";
 
 interface InterviewContext {
   // 입력
@@ -58,16 +48,6 @@ const INITIAL_CONTEXT: InterviewContext = {
   error: null,
 };
 
-async function postJSON(url: string, body: unknown): Promise<AgentResponse> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`요청 실패 (${res.status})`);
-  return res.json();
-}
-
 export const interviewMachine = setup({
   types: {
     context: {} as InterviewContext,
@@ -76,28 +56,16 @@ export const interviewMachine = setup({
   actors: {
     // 면접 시작 → 첫 질문
     startInterview: fromPromise(
-      async ({
+      ({
         input,
       }: {
         input: { resume: string; techProfile: string; questionCount: number };
-      }) =>
-        postJSON("/api/interview/start", {
-          resume: input.resume,
-          tech_profile: input.techProfile,
-          target_count: input.questionCount,
-        }),
+      }) => api.startInterview(input),
     ),
     // 답변 전사 제출 → 다음 질문 또는 피드백
     submitAnswer: fromPromise(
-      async ({
-        input,
-      }: {
-        input: { sessionId: string | null; transcript: string };
-      }) =>
-        postJSON("/api/interview/answer", {
-          session_id: input.sessionId,
-          transcript: input.transcript,
-        }),
+      ({ input }: { input: { sessionId: string | null; transcript: string } }) =>
+        api.submitAnswer(input),
     ),
   },
   actions: {
