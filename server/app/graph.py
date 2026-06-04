@@ -1,8 +1,9 @@
-"""면접 진행 LangGraph 그래프 (P0 더미 버전).
+"""면접 진행 LangGraph 그래프.
 
-LLM 없이 더미 노드로 generate → await_answer → route_next → evaluate 흐름과
-휴먼인더루프(interrupt/resume) + 체크포인터 재개를 검증하기 위한 골격이다.
-P1 이후 더미 노드를 실제 에이전트로 교체한다.
+generate_questions → await_answer → route_next → evaluate 흐름.
+질문 생성은 Orchestrator(면접관 에이전트들)에 위임하고, await_answer는
+휴먼인더루프(interrupt/resume)로 답변 전사를 기다린다.
+평가(evaluate)는 아직 더미이며 P4에서 Evaluator 에이전트로 교체한다.
 """
 from typing import Literal, TypedDict
 
@@ -10,12 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
-from .agents.technical import generate_technical_questions
-
-InterviewerRole = Literal["facilitator", "technical", "personality"]
-
-THINK_SECONDS = 10
-ANSWER_SECONDS = 180
+from .orchestrator import build_questions
 
 
 # 그래프 전체가 공유하는 상태 (기획서 §4.3)
@@ -27,54 +23,15 @@ class InterviewState(TypedDict):
     current_index: int
     answers: list[dict]
     feedback: list[dict]
-    overall: dict  # 종합 피드백
+    overall: dict
     phase: str  # generating | interviewing | feedback
 
 
-def _distribution(target: int) -> dict[InterviewerRole, int]:
-    """문항 수 → 면접관별 배분 (기획서 §3.2). 진행자 항상 1."""
-    target = max(6, min(8, target))
-    if target == 6:
-        return {"facilitator": 1, "technical": 2, "personality": 3}
-    if target == 8:
-        return {"facilitator": 1, "technical": 3, "personality": 4}
-    return {"facilitator": 1, "technical": 3, "personality": 3}
-
-
 def generate_questions(state: InterviewState) -> dict:
-    """배분 규칙대로 역할별 질문을 생성한다.
-
-    P1: 기술(technical) 파트는 Technical 에이전트(Gemini)가 생성하고,
-    진행자/인성은 아직 더미. P2에서 나머지도 에이전트로 교체한다.
-    """
-    dist = _distribution(state["target_count"])
-
-    # 기술 질문은 에이전트가 생성 (실패 시 내부 폴백)
-    tech_drafts = generate_technical_questions(
-        state["tech_profile"], dist["technical"]
+    """Orchestrator가 면접관 에이전트들을 호출해 역할별 질문을 생성한다."""
+    questions = build_questions(
+        state["resume"], state["tech_profile"], state["target_count"]
     )
-
-    questions: list[dict] = []
-    n = 0
-    for role in ("facilitator", "technical", "personality"):
-        for i in range(dist[role]):  # type: ignore[index]
-            n += 1
-            if role == "technical":
-                draft = tech_drafts[i]
-                text, source = draft["text"], draft["sourceHint"]
-            else:
-                text = f"[더미] {role} 면접관의 질문 {n}"
-                source = "(더미 — LLM 미연동)"
-            questions.append(
-                {
-                    "id": f"q-{n:03d}",
-                    "interviewer": role,
-                    "text": text,
-                    "sourceHint": source,
-                    "thinkSeconds": THINK_SECONDS,
-                    "answerSeconds": ANSWER_SECONDS,
-                }
-            )
     return {
         "questions": questions,
         "current_index": 0,
@@ -142,7 +99,7 @@ def evaluate(state: InterviewState) -> dict:
 
 
 def build_graph():
-    """더미 그래프 컴파일 (인메모리 체크포인터)."""
+    """그래프 컴파일 (인메모리 체크포인터)."""
     g = StateGraph(InterviewState)
     g.add_node("generate_questions", generate_questions)
     g.add_node("await_answer", await_answer)

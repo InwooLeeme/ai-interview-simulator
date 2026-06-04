@@ -16,11 +16,10 @@ from .graph import Command, build_graph
 
 app = FastAPI(title="AI Interview Agent Server", version="0.1.0")
 
-# 앱 시작 시 더미 그래프를 한 번 컴파일해 보관 (요청마다 재컴파일하지 않음)
+# 그래프를 한 번 컴파일해 보관 (요청마다 재컴파일 방지)
 graph = build_graph()
 
 
-# --- 요청 모델 (HTTP body 검증) ---
 class StartRequest(BaseModel):
     resume: str = ""
     tech_profile: str = ""
@@ -32,7 +31,6 @@ class AnswerRequest(BaseModel):
     transcript: str = ""
 
 
-# --- 헬퍼 ---
 def _config(session_id: str) -> dict:
     """LangGraph에 이 세션의 체크포인트로 이어가라고 알리는 설정."""
     return {"configurable": {"thread_id": session_id}}
@@ -60,6 +58,11 @@ def _format(result: dict, session_id: str) -> dict:
         "overall": result.get("overall", {}),
         "answers": result.get("answers", []),
     }
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
 
 
 @app.post("/api/interview/start")
