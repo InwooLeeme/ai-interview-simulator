@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { InterviewerRole, Question } from "@/lib/interview-machine";
+import { useSpeech } from "@/lib/useSpeech";
+import { useSpeechRecognition } from "@/lib/useSpeechRecognition";
 
 const ROLES: { key: InterviewerRole; label: string }[] = [
   { key: "facilitator", label: "진행자" },
@@ -64,12 +66,23 @@ export default function InterviewScreen({
   onEndAnswer,
   onTranscript,
 }: Props) {
-  // questionPresent: TTS가 없는 동안 자동으로 고민 단계로 진입 (P3-5에서 TTS 종료가 대체)
+  const { speak, cancel } = useSpeech();
+  const { start, stop, supported: sttSupported, listening } =
+    useSpeechRecognition(onTranscript);
+
+  // questionPresent: 담당 면접관이 질문을 TTS로 읽고, 다 읽으면 고민 단계로
   useEffect(() => {
-    if (phase !== "questionPresent") return;
-    const id = setTimeout(onContinue, 800);
-    return () => clearTimeout(id);
-  }, [phase, onContinue]);
+    if (phase !== "questionPresent" || !question) return;
+    speak(question.text, question.interviewer, onContinue);
+    return () => cancel();
+  }, [phase, question, onContinue, speak, cancel]);
+
+  // answering: 답변 동안 STT 실시간 전사 (종료 시 정지)
+  useEffect(() => {
+    if (phase !== "answering") return;
+    start();
+    return () => stop();
+  }, [phase, start, stop]);
 
   const thinkSec = question?.thinkSeconds ?? 10;
   const answerSec = question?.answerSeconds ?? 180;
@@ -140,10 +153,21 @@ export default function InterviewScreen({
 
             {phase === "answering" && (
               <div className="flex w-full flex-col items-center gap-3">
-                {/* 전사 임시 입력 (P4에서 STT로 교체) */}
+                <div className="text-xs text-gray-500">
+                  {sttSupported ? (
+                    listening ? (
+                      <span className="text-red-500">● 음성 인식 중… 말하면 아래에 전사됩니다</span>
+                    ) : (
+                      "음성 인식 준비 중…"
+                    )
+                  ) : (
+                    "이 브라우저는 음성 인식을 지원하지 않습니다 — 직접 입력하세요 (Chrome 권장)"
+                  )}
+                </div>
+                {/* 실시간 전사 결과 (미지원 시 직접 입력 폴백) */}
                 <textarea
                   className="min-h-24 w-full resize-y rounded-md border border-gray-300 p-3 text-sm focus:border-gray-500 focus:outline-none"
-                  placeholder="(임시) 답변 내용을 입력하세요 — 추후 음성 전사(STT)로 대체됩니다."
+                  placeholder="여기에 답변 전사가 표시됩니다. 직접 수정할 수도 있습니다."
                   value={transcript}
                   onChange={(e) => onTranscript(e.target.value)}
                 />

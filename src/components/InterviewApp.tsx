@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useMachine } from "@xstate/react";
 import { interviewMachine } from "@/lib/interview-machine";
 import DocInputScreen from "./DocInputScreen";
@@ -25,6 +26,21 @@ function Centered({ children }: { children: React.ReactNode }) {
 export default function InterviewApp() {
   const [snapshot, send] = useMachine(interviewMachine);
   const state = snapshot.value;
+
+  // send는 안정적 → 핸들러를 memo해 자식의 effect 의존성이 매 렌더 바뀌지 않게 함
+  const handleContinue = useCallback(() => send({ type: "CONTINUE" }), [send]);
+  const handleStartAnswer = useCallback(
+    () => send({ type: "START_ANSWER" }),
+    [send],
+  );
+  const handleEndAnswer = useCallback(
+    () => send({ type: "END_ANSWER" }),
+    [send],
+  );
+  const handleTranscript = useCallback(
+    (v: string) => send({ type: "SET_TRANSCRIPT", value: v }),
+    [send],
+  );
 
   if (state === "docInput") {
     return (
@@ -73,10 +89,10 @@ export default function InterviewApp() {
         index={index}
         total={total}
         transcript={transcript}
-        onContinue={() => send({ type: "CONTINUE" })}
-        onStartAnswer={() => send({ type: "START_ANSWER" })}
-        onEndAnswer={() => send({ type: "END_ANSWER" })}
-        onTranscript={(v) => send({ type: "SET_TRANSCRIPT", value: v })}
+        onContinue={handleContinue}
+        onStartAnswer={handleStartAnswer}
+        onEndAnswer={handleEndAnswer}
+        onTranscript={handleTranscript}
       />
     );
   }
