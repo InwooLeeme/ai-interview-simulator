@@ -1,9 +1,8 @@
 """면접 진행 LangGraph 그래프.
 
 generate_questions → await_answer → route_next → evaluate 흐름.
-질문 생성은 Orchestrator(면접관 에이전트들)에 위임하고, await_answer는
-휴먼인더루프(interrupt/resume)로 답변 전사를 기다린다.
-평가(evaluate)는 아직 더미이며 P4에서 Evaluator 에이전트로 교체한다.
+질문 생성은 Orchestrator(면접관 에이전트들)에, 평가는 Evaluator 에이전트에 위임하고,
+await_answer는 휴먼인더루프(interrupt/resume)로 답변 전사를 기다린다.
 """
 from typing import Literal, TypedDict
 
@@ -11,6 +10,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
+from .agents.evaluator import evaluate_interview
 from .orchestrator import build_questions
 
 
@@ -75,27 +75,18 @@ def route_next(state: InterviewState) -> Literal["await_answer", "evaluate"]:
 
 
 def evaluate(state: InterviewState) -> dict:
-    """더미 평가. P4에서 Evaluator 에이전트로 교체."""
-    feedback = []
-    for ans in state["answers"]:
-        empty = not (ans.get("transcript") or "").strip()
-        feedback.append(
-            {
-                "questionId": ans["question_id"],
-                "strengths": [] if empty else ["[더미] 답변을 잘 정리함"],
-                "improvements": (
-                    ["답변이 감지되지 않음"] if empty else ["[더미] STAR 구조로 보완"]
-                ),
-                "structureTip": "[더미] 상황·과제·행동·결과 순으로",
-                "modelAnswerDirection": "[더미] 핵심 성과를 수치와 함께 먼저 제시",
-            }
-        )
-    overall = {
-        "impression": "[더미] 전반 인상",
-        "timeUsage": "[더미] 시간 활용 코멘트",
-        "topImprovements": ["[더미] 우선 개선 1", "[더미] 우선 개선 2"],
+    """Evaluator 에이전트가 질문·답변을 평가해 피드백·총평을 생성한다."""
+    result = evaluate_interview(
+        state["questions"],
+        state["answers"],
+        state["resume"],
+        state["tech_profile"],
+    )
+    return {
+        "feedback": result["feedback"],
+        "overall": result["overall"],
+        "phase": "feedback",
     }
-    return {"feedback": feedback, "phase": "feedback", "overall": overall}
 
 
 def build_graph():
